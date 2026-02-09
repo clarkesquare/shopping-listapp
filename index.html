@@ -332,7 +332,7 @@
         // Supabase 설정
         const SUPABASE_URL = 'https://tujjdmghtwepglxqldzp.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1ampkbWdodHdlcGdseHFsZHpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA1NjUxOTksImV4cCI6MjA4NjE0MTE5OX0.4jUhukOAa9UEZjSHWXbIOpmKSeDJquQRLrOEIYQu4Ls';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // DOM 요소 캐싱
         const elements = {
@@ -364,7 +364,7 @@
 
         // Supabase에서 아이템 로드
         const loadItems = async () => {
-            const { data, error } = await supabase
+            const { data, error } = await db
                 .from('shopping_items')
                 .select('*')
                 .order('created_at', { ascending: true });
@@ -401,7 +401,7 @@
             const text = elements.input.value.trim();
 
             if (text) {
-                const { data, error } = await supabase
+                const { data, error } = await db
                     .from('shopping_items')
                     .insert([{ text, checked: false }])
                     .select()
@@ -427,7 +427,7 @@
         const deleteItem = async (index) => {
             const item = items[index];
 
-            const { error } = await supabase
+            const { error } = await db
                 .from('shopping_items')
                 .delete()
                 .eq('id', item.id);
@@ -446,7 +446,7 @@
             const item = items[index];
             const newChecked = !item.checked;
 
-            const { error } = await supabase
+            const { error } = await db
                 .from('shopping_items')
                 .update({ checked: newChecked })
                 .eq('id', item.id);
@@ -504,7 +504,7 @@
         });
 
         // 실시간 구독 (다른 기기/탭에서 변경 시 자동 업데이트)
-        supabase
+        db
             .channel('shopping_items_changes')
             .on('postgres_changes',
                 { event: '*', schema: 'public', table: 'shopping_items' },

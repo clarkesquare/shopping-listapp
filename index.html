@@ -327,7 +327,13 @@
         <div class="stats" id="stats">총 0개 항목</div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
+        // Supabase 설정
+        const SUPABASE_URL = 'https://tujjdmghtwepglxqldzp.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1ampkbWdodHdlcGdseHFsZHpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA1NjUxOTksImV4cCI6MjA4NjE0MTE5OX0.4jUhukOAa9UEZjSHWXbIOpmKSeDJquQRLrOEIYQu4Ls';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
         // DOM 요소 캐싱
         const elements = {
             list: document.getElementById('shoppingList'),
@@ -339,7 +345,7 @@
         };
 
         // 상태 관리
-        let items = JSON.parse(localStorage.getItem('shoppingList')) || [];
+        let items = [];
         let theme = localStorage.getItem('theme') || 'light';
 
         // 초기 테마 적용
@@ -352,18 +358,34 @@
             return div.innerHTML;
         };
 
-        const saveItems = () => {
-            localStorage.setItem('shoppingList', JSON.stringify(items));
-        };
-
         const saveTheme = () => {
             localStorage.setItem('theme', theme);
+        };
+
+        // Supabase에서 아이템 로드
+        const loadItems = async () => {
+            const { data, error } = await supabase
+                .from('shopping_items')
+                .select('*')
+                .order('created_at', { ascending: true });
+
+            if (error) {
+                console.error('데이터 로드 오류:', error);
+                return;
+            }
+
+            items = data.map(item => ({
+                id: item.id,
+                text: item.text,
+                checked: item.checked
+            }));
+            renderList();
         };
 
         // 렌더링 함수
         const renderList = () => {
             elements.list.innerHTML = items.map((item, index) => `
-                <li class="shopping-item ${item.checked ? 'checked' : ''}" data-index="${index}">
+                <li class="shopping-item ${item.checked ? 'checked' : ''}" data-index="${index}" data-id="${item.id}">
                     <div class="checkbox" data-action="toggle"></div>
                     <span class="item-text">${escapeHtml(item.text)}</span>
                     <button class="delete-btn" data-action="delete">×</button>
@@ -375,12 +397,26 @@
         };
 
         // 아이템 추가
-        const addItem = () => {
+        const addItem = async () => {
             const text = elements.input.value.trim();
 
             if (text) {
-                items.push({ text, checked: false });
-                saveItems();
+                const { data, error } = await supabase
+                    .from('shopping_items')
+                    .insert([{ text, checked: false }])
+                    .select()
+                    .single();
+
+                if (error) {
+                    console.error('아이템 추가 오류:', error);
+                    return;
+                }
+
+                items.push({
+                    id: data.id,
+                    text: data.text,
+                    checked: data.checked
+                });
                 renderList();
                 elements.input.value = '';
                 elements.input.focus();
@@ -388,16 +424,39 @@
         };
 
         // 아이템 삭제
-        const deleteItem = (index) => {
+        const deleteItem = async (index) => {
+            const item = items[index];
+
+            const { error } = await supabase
+                .from('shopping_items')
+                .delete()
+                .eq('id', item.id);
+
+            if (error) {
+                console.error('아이템 삭제 오류:', error);
+                return;
+            }
+
             items.splice(index, 1);
-            saveItems();
             renderList();
         };
 
         // 아이템 토글
-        const toggleItem = (index) => {
-            items[index].checked = !items[index].checked;
-            saveItems();
+        const toggleItem = async (index) => {
+            const item = items[index];
+            const newChecked = !item.checked;
+
+            const { error } = await supabase
+                .from('shopping_items')
+                .update({ checked: newChecked })
+                .eq('id', item.id);
+
+            if (error) {
+                console.error('아이템 업데이트 오류:', error);
+                return;
+            }
+
+            items[index].checked = newChecked;
             renderList();
         };
 
@@ -436,19 +495,25 @@
         // 테마 토글 버튼
         elements.themeToggle.addEventListener('click', toggleTheme);
 
-        // 다중 탭 동기화 - Storage 이벤트 리스닝
+        // 테마 동기화 (다중 탭)
         window.addEventListener('storage', (e) => {
-            if (e.key === 'shoppingList') {
-                items = JSON.parse(e.newValue) || [];
-                renderList();
-            } else if (e.key === 'theme') {
+            if (e.key === 'theme') {
                 theme = e.newValue || 'light';
                 elements.html.setAttribute('data-theme', theme);
             }
         });
 
-        // 초기 렌더링
-        renderList();
+        // 실시간 구독 (다른 기기/탭에서 변경 시 자동 업데이트)
+        supabase
+            .channel('shopping_items_changes')
+            .on('postgres_changes',
+                { event: '*', schema: 'public', table: 'shopping_items' },
+                () => loadItems()
+            )
+            .subscribe();
+
+        // 초기 로드
+        loadItems();
     </script>
 </body>
 </html>

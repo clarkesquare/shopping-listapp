@@ -1,0 +1,17 @@
+{
+  "name": "shopping-listapp",
+  "version": "1.0.0",
+  "description": "A simple and elegant shopping list application with light/dark mode support",
+  "main": "index.js",
+  "scripts": {
+    "test": "node shopping-list.test.js"
+  },
+  "keywords": ["shopping", "list", "app", "dark-mode", "localstorage"],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "playwright": "^1.58.2"
+  }
+}

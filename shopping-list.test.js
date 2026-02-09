@@ -1,7 +1,7 @@
 const { chromium } = require('playwright');
 const path = require('path');
 
-const FILE_PATH = `file:///${path.resolve(__dirname, 'shopping-list.html').replace(/\\/g, '/')}`;
+const FILE_PATH = `file:///${path.resolve(__dirname, 'index.html').replace(/\\/g, '/')}`;
 
 async function runTests() {
     console.log('🧪 쇼핑 리스트 앱 테스트 시작\n');
@@ -333,7 +333,7 @@ async function runTests() {
         `);
 
         // 잠시 대기 후 브라우저 닫기
-        console.log('\n⏳ 5초 후 브라우저가 닫힙니다...');
+        console.log('\n⏳ 5초 후 브라우저가 닫힉니다...');
         await page.waitForTimeout(5000);
 
     } catch (error) {
